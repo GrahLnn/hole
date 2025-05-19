@@ -3,3 +3,14 @@ export interface CenterToolProp {
   node: React.ReactNode;
 }
 
+export enum MainPage {
+  Home = "Home",
+  Account = "Account",
+  SSH = "SSH",
+  BankCard = "BankCard",
+  SeedPhrase = "SeedPhrase",
+  Notes = "Notes",
+  Settings = "Settings",
+
+  NotFound = "NotFound",
+}
