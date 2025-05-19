@@ -18,10 +18,8 @@ use tokio::time::sleep;
 use utils::event::{self, WINDOW_READY};
 
 #[cfg(target_os = "macos")]
-use std::cell::RefCell;
-#[cfg(target_os = "macos")]
 thread_local! {
-    static MAIN_WINDOW_OBSERVER: RefCell<Option<macos_titlebar::FullscreenStateManager>> = RefCell::new(None);
+    static MAIN_WINDOW_OBSERVER: std::cell::RefCell<Option<utils::macos_titlebar::FullscreenStateManager>> = std::cell::RefCell::new(None);
 }
 
 const DB_PATH: &str = "surreal.db";
