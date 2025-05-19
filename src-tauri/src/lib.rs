@@ -2,7 +2,6 @@ mod database;
 mod domain;
 mod utils;
 
-use std::cell::RefCell;
 use std::time::Duration;
 
 use anyhow::Result;
@@ -19,10 +18,8 @@ use tokio::time::sleep;
 use utils::event::{self, WINDOW_READY};
 
 #[cfg(target_os = "macos")]
-use utils::macos_titlebar;
-
-#[cfg(target_os = "macos")]
 thread_local! {
+    use std::cell::RefCell;
     static MAIN_WINDOW_OBSERVER: RefCell<Option<macos_titlebar::FullscreenStateManager>> = RefCell::new(None);
 }
 
@@ -51,9 +48,12 @@ pub fn run() {
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_os::init())
         .plugin(tauri_plugin_shell::init())
-        .setup(|app| {
+        .plugin(tauri_plugin_os::init())
+        .plugin(tauri_plugin_shell::init())
+        .invoke_handler(builder.invoke_handler())
+        .setup(move |app| {
             let handle = app.handle().clone();
-
+            builder.mount_events(app);
             block_in_place(|| {
                 block_on(async move {
                     let local_data_dir = handle.path().app_local_data_dir()?;
@@ -81,9 +81,9 @@ pub fn run() {
                         }
                         #[cfg(target_os = "macos")]
                         {
-                            // Call the setup function from your new module
-                            macos_titlebar::setup_custom_macos_titlebar(&window);
                             use objc2::MainThreadMarker;
+                            use utils::macos_titlebar;
+                            macos_titlebar::setup_custom_macos_titlebar(&window);
 
                             // Manage the FullscreenObserver's lifetime.
                             // This is a bit tricky because you need to store it somewhere
@@ -143,9 +143,6 @@ pub fn run() {
                 })
             })
         })
-        .plugin(tauri_plugin_os::init())
-        .plugin(tauri_plugin_shell::init())
-        .invoke_handler(builder.invoke_handler())
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
