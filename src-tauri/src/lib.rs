@@ -2,31 +2,40 @@ mod database;
 mod domain;
 mod utils;
 
-use std::time::Duration;
-
 use anyhow::Result;
 use database::{init_db, Crud};
 use domain::models::user::DbUser;
 use futures::future;
 use specta_typescript::{formatter::prettier, Typescript};
 use std::sync::atomic::Ordering;
+use std::time::Duration;
+use tauri::async_runtime::block_on;
 use tauri::Manager;
-use tauri::{async_runtime::block_on, AppHandle};
 use tauri_specta::{collect_commands, collect_events, Builder};
 use tokio::task::block_in_place;
 use tokio::time::sleep;
 use utils::event::{self, WINDOW_READY};
 
 #[cfg(target_os = "macos")]
+use std::cell::RefCell;
+#[cfg(target_os = "macos")]
+use utils::macos_titlebar::FullscreenStateManager;
+#[cfg(target_os = "macos")]
 thread_local! {
-    static MAIN_WINDOW_OBSERVER: std::cell::RefCell<Option<utils::macos_titlebar::FullscreenStateManager>> = std::cell::RefCell::new(None);
+    static MAIN_WINDOW_OBSERVER: RefCell<Option<FullscreenStateManager>> = RefCell::new(None);
 }
 
 const DB_PATH: &str = "surreal.db";
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    let commands = collect_commands![app_ready, greet, clean];
+    let commands = collect_commands![
+        utils::file::exists,
+        utils::core::app_ready,
+        utils::window::get_mouse_and_window_position,
+        greet,
+        clean,
+    ];
     let events = collect_events![event::FullScreenEvent];
 
     let builder: Builder = Builder::new().commands(commands).events(events);
@@ -57,7 +66,9 @@ pub fn run() {
                 block_on(async move {
                     let local_data_dir = handle.path().app_local_data_dir()?;
                     let db_path = local_data_dir.join(DB_PATH);
+                    println!("DB initialized on {}", db_path.display());
                     init_db(db_path).await?;
+
                     if let Some(window) = handle.get_webview_window("main") {
                         tokio::spawn({
                             let window = window.clone();
@@ -148,14 +159,6 @@ pub fn run() {
 
 #[tauri::command]
 #[specta::specta]
-async fn app_ready(app_handle: AppHandle) {
-    let window = app_handle.get_webview_window("main").unwrap();
-    window.show().unwrap();
-    WINDOW_READY.store(true, Ordering::SeqCst);
-}
-
-#[tauri::command]
-#[specta::specta]
 async fn greet(name: &str) -> Result<String, String> {
     let _ = DbUser::insert_jump(vec![DbUser {
         id: DbUser::record_id(name),
@@ -185,3 +188,4 @@ async fn clean() -> Result<String, String> {
     DbUser::clean().await.map_err(|e| e.to_string())?;
     Ok("message cleaned".to_string())
 }
+
