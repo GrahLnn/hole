@@ -2,10 +2,8 @@ mod database;
 mod domain;
 mod utils;
 
-use anyhow::Result;
-use database::{init_db, Crud};
-use domain::models::user::DbUser;
-use futures::future;
+use database::init_db;
+use domain::models::account;
 use specta_typescript::{formatter::prettier, Typescript};
 use std::sync::atomic::Ordering;
 use std::time::Duration;
@@ -33,8 +31,21 @@ pub fn run() {
         utils::file::exists,
         utils::core::app_ready,
         utils::window::get_mouse_and_window_position,
-        greet,
-        clean,
+        account::relate_platform,
+        account::unrelate_platform,
+        account::relate_login_info,
+        account::update_login_info,
+        account::delete_login_info,
+        account::relate_token,
+        account::update_token,
+        account::delete_token,
+        account::relate_note,
+        account::update_note,
+        account::delete_note,
+        account::create_account,
+        account::create_platform,
+        account::read_account_summary,
+        account::read_platform_detail,
     ];
     let events = collect_events![event::FullScreenEvent];
 
@@ -156,36 +167,3 @@ pub fn run() {
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
-
-#[tauri::command]
-#[specta::specta]
-async fn greet(name: &str) -> Result<String, String> {
-    let _ = DbUser::insert_jump(vec![DbUser {
-        id: DbUser::record_id(name),
-    }])
-    .await
-    .map_err(|e| e.to_string())?;
-    let dbusers = DbUser::select_all().await.map_err(|e| e.to_string())?;
-
-    let futures = dbusers.into_iter().map(|u| u.into_model());
-    let users = future::try_join_all(futures)
-        .await
-        .map_err(|e| e.to_string())?;
-
-    Ok(format!(
-        "Hello, {}! You've been greeted from Rust!",
-        users
-            .iter()
-            .map(|u| u.id.as_str())
-            .collect::<Vec<&str>>()
-            .join(", ")
-    ))
-}
-
-#[tauri::command]
-#[specta::specta]
-async fn clean() -> Result<String, String> {
-    DbUser::clean().await.map_err(|e| e.to_string())?;
-    Ok("message cleaned".to_string())
-}
-

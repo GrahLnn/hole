@@ -1,14 +1,21 @@
-use super::enums::table::Table;
+use super::enums::table::{Rel, Table};
 use super::error::DBError;
-
 use super::{get_db, HasId, QueryKind};
 use anyhow::Result;
 use async_trait::async_trait;
-use futures::future::try_join_all;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::BTreeMap;
 use surrealdb::{RecordId, RecordIdKey, Response};
+
+fn struct_field_names<T: Serialize>(data: &T) -> Vec<String> {
+    // serialize struct to serde_json::Value
+    let value = serde_json::to_value(data).unwrap();
+    match value {
+        Value::Object(map) => map.keys().cloned().collect(),
+        _ => vec![],
+    }
+}
 
 #[async_trait]
 pub trait Crud:
@@ -23,9 +30,22 @@ pub trait Crud:
         RecordId::from((Self::TABLE.as_str(), id))
     }
 
-    async fn create(data: Self) -> Result<Self> {
+    async fn create(&self) -> Result<Self> {
         let db = get_db()?;
-        let created: Option<Self> = db.create(Self::TABLE.as_str()).content(data).await?;
+        let created: Option<Self> = db
+            .create(Self::TABLE.as_str())
+            .content(self.clone())
+            .await?;
+        created.ok_or(DBError::NotFound.into())
+    }
+
+    async fn create_return_id(&self) -> Result<RecordId> {
+        let db = get_db()?;
+        let created: Option<RecordId> = db
+            .query(QueryKind::create_return_id(Self::TABLE))
+            .bind(("data", self.clone()))
+            .await?
+            .take(0)?;
         created.ok_or(DBError::NotFound.into())
     }
 
@@ -45,6 +65,12 @@ pub trait Crud:
     {
         let db = get_db()?;
         let updated: Option<Self> = db.upsert(self.id()).content(self.clone()).await?;
+        updated.ok_or(DBError::NotFound.into())
+    }
+
+    async fn upsert_by_id(id: RecordId, data: Self) -> Result<Self> {
+        let db = get_db()?;
+        let updated: Option<Self> = db.upsert(id).content(data).await?;
         updated.ok_or(DBError::NotFound.into())
     }
 
@@ -79,10 +105,7 @@ pub trait Crud:
         Ok(records)
     }
 
-    async fn update(id: RecordId, data: Self) -> Result<Self>
-    where
-        Self: HasId,
-    {
+    async fn update(id: RecordId, data: Self) -> Result<Self> {
         let db = get_db()?;
         let updated: Option<Self> = db.update(id).content(data).await?;
         updated.ok_or(DBError::NotFound.into())
@@ -120,19 +143,44 @@ pub trait Crud:
     where
         Self: HasId,
     {
-        let db = get_db()?; 
-        let chunk_size = 50_000; 
+        let db = get_db()?;
+        let chunk_size = 50_000;
         let mut inserted_all = Vec::with_capacity(data.len());
 
         // 順序处理，每次只持有一个 Vec
         for chunk in data.chunks(chunk_size) {
             let chunk_clone = chunk.to_vec(); // Clone the chunk to ensure it lives long enough
             let inserted: Vec<Self> = db
-                .query(QueryKind::insert(Self::TABLE.as_str()))
+                .query(QueryKind::insert(Self::TABLE))
                 .bind(("data", chunk_clone)) // Use the cloned chunk
                 .await?
                 .take(0)?;
             inserted_all.extend(inserted);
+        }
+
+        Ok(inserted_all)
+    }
+
+    async fn insert_replace(data: Vec<Self>) -> Result<Vec<Self>> {
+        let db = get_db()?;
+        let chunk_size = 50_000;
+        let mut inserted_all = Vec::with_capacity(data.len());
+        let keys = struct_field_names(&data[0]);
+
+        for chunk in data.chunks(chunk_size) {
+            let chunk_clone = chunk.to_vec();
+            let inserted: Vec<Self> = db
+                .query(QueryKind::insert_replace(Self::TABLE, keys.clone()))
+                .bind(("data", chunk_clone))
+                .await?
+                .take(0)?;
+            inserted_all.extend(inserted);
+            println!(
+                "{} inserted: {}/{}",
+                Self::TABLE,
+                inserted_all.len(),
+                data.len()
+            );
         }
 
         Ok(inserted_all)
@@ -162,6 +210,13 @@ pub trait Crud:
         Ok(())
     }
 
+    async fn query_response(sql: &str) -> Result<Response> {
+        let db = get_db()?;
+        db.query(sql)
+            .await
+            .map_err(|e| anyhow::anyhow!("query error: {}", e))
+    }
+
     async fn query_take(sql: &str, idx: Option<usize>) -> Result<Vec<Self>> {
         let db = get_db()?;
         let mut result = db.query(sql).await?;
@@ -174,6 +229,63 @@ pub trait Crud:
         let mut result = db.query(QueryKind::range(Self::TABLE, start, end)).await?;
         let records: Vec<Self> = result.take(0)?;
         Ok(records)
+    }
+
+    async fn relate_by_id(self_id: RecordId, target_id: RecordId, rel: Rel) -> Result<()> {
+        let db = get_db()?;
+        db.query(QueryKind::relate(self_id, target_id, rel)).await?;
+        Ok(())
+    }
+
+    async fn unrelate_by_id(self_id: RecordId, target_id: RecordId, rel: Rel) -> Result<()> {
+        let db = get_db()?;
+        db.query(QueryKind::unrelate(self_id, target_id, rel))
+            .await?;
+        Ok(())
+    }
+
+    async fn unrelate_all(self_id: RecordId, rel: Rel) -> Result<()> {
+        let db = get_db()?;
+        db.query(QueryKind::unrelate_all(self_id, rel)).await?;
+        Ok(())
+    }
+
+    async fn relate<T>(&self, target: T, rel: Rel) -> Result<()>
+    where
+        Self: HasId + Send + Sync,
+        T: HasId + Send + Sync,
+    {
+        Self::relate_by_id(self.id(), target.id(), rel).await
+    }
+
+    async fn unrelate<T>(&self, target: T, rel: Rel) -> Result<()>
+    where
+        Self: HasId + Send + Sync,
+        T: HasId + Send + Sync,
+    {
+        Self::unrelate_by_id(self.id(), target.id(), rel).await
+    }
+
+    async fn outs(in_id: RecordId, rel: Rel, out_table: Table) -> Result<Vec<RecordId>> {
+        let sql = QueryKind::rel_outs(in_id, rel, out_table);
+        query_take(sql.as_str(), None).await
+    }
+
+    async fn ins(out_id: RecordId, rel: Rel, in_table: Table) -> Result<Vec<RecordId>> {
+        let sql = QueryKind::rel_ins(out_id, rel, in_table);
+        query_take(sql.as_str(), None).await
+    }
+
+    async fn select_record_id(k: &str, v: &str) -> Result<RecordId> {
+        let sql = QueryKind::select_id_single(Self::TABLE, k, v);
+        let ids: Vec<RecordId> = query_take(sql.as_str(), None).await?;
+        let id = ids.into_iter().next();
+        id.ok_or(DBError::NotFound.into())
+    }
+
+    async fn all_record() -> Result<Vec<RecordId>> {
+        let sql = QueryKind::all_id(Self::TABLE);
+        query_take(sql.as_str(), None).await
     }
 }
 

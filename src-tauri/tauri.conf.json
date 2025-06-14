@@ -1,8 +1,8 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "tauri-react-template",
+  "productName": "Hole",
   "version": "0.0.1",
-  "identifier": "com.tauri.dev",
+  "identifier": "com.hole.app",
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://localhost:3000",
@@ -14,6 +14,7 @@
     "macOSPrivateApi": true,
     "windows": [
       {
+        "title": "Hole",
         "hiddenTitle": true,
         "width": 1400,
         "height": 750,

@@ -5,20 +5,140 @@
 
 
 export const commands = {
-async appReady() : Promise<void> {
-    await TAURI_INVOKE("app_ready");
-},
-async greet(name: string) : Promise<Result<string, string>> {
+async exists(path: string) : Promise<Result<boolean, string>> {
     try {
-    return { status: "ok", data: await TAURI_INVOKE("greet", { name }) };
+    return { status: "ok", data: await TAURI_INVOKE("exists", { path }) };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
 }
 },
-async clean() : Promise<Result<string, string>> {
+async appReady() : Promise<void> {
+    await TAURI_INVOKE("app_ready");
+},
+async getMouseAndWindowPosition() : Promise<Result<MouseWindowInfo, string>> {
     try {
-    return { status: "ok", data: await TAURI_INVOKE("clean") };
+    return { status: "ok", data: await TAURI_INVOKE("get_mouse_and_window_position") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async relatePlatform(email: string, platform: string) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("relate_platform", { email, platform }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async unrelatePlatform(email: string, platform: string) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("unrelate_platform", { email, platform }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async relateLoginInfo(email: string, platform: string, login: Login) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("relate_login_info", { email, platform, login }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async updateLoginInfo(email: string, platform: string, login: Login) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("update_login_info", { email, platform, login }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async deleteLoginInfo(email: string, platform: string) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("delete_login_info", { email, platform }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async relateToken(email: string, platform: string, token: Token) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("relate_token", { email, platform, token }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async updateToken(name: string, token: Token) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("update_token", { name, token }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async deleteToken(email: string, platform: string, name: string) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("delete_token", { email, platform, name }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async relateNote(email: string, platform: string, note: Note) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("relate_note", { email, platform, note }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async updateNote(name: string, note: Note) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("update_note", { name, note }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async deleteNote(email: string, platform: string, name: string) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("delete_note", { email, platform, name }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async createAccount(email: string) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("create_account", { email }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async createPlatform(sitename: string, url: string) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("create_platform", { sitename, url }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async readAccountSummary() : Promise<Result<AccountSummary[], string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("read_account_summary") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async readPlatformDetail(email: string, platform: string) : Promise<Result<PlatformDetail, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("read_platform_detail", { email, platform }) };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
@@ -41,7 +161,18 @@ fullScreenEvent: "full-screen-event"
 
 /** user-defined types **/
 
+export type AccountStatus = "Online" | "Unavailable"
+export type AccountSummary = { email: string; platforms: PlatformSummary[] }
 export type FullScreenEvent = { is_fullscreen: boolean }
+export type Login = { login_method: LoginMethod; status: AccountStatus; cookies: string | null }
+export type LoginMethod = { SingleSignOn: { login_site: Platform } } | { NamePassword: { password: string } }
+export type MouseWindowInfo = { mouse_x: number; mouse_y: number; window_x: number; window_y: number; window_width: number; window_height: number; rel_x: number; rel_y: number; pixel_ratio: number }
+export type Note = { name: string; value: string }
+export type Platform = { sitename: string; url: string }
+export type PlatformDetail = { sitename: string; url: string; status: AccountStatus; cookies: string | null; tokens: Token[]; notes: Note[] }
+export type PlatformSummary = { sitename: string; status: AccountStatus; has_cookie: boolean; token_count: number; note_count: number }
+export type Token = { name: string; value: string; status: TokenStatus }
+export type TokenStatus = "Active" | "Inactive"
 
 /** tauri-specta globals **/
 

@@ -5,7 +5,10 @@ import type React from "react";
 import { type PropsWithChildren, memo, useEffect } from "react";
 import { useIsBarVisible } from "./state_machine/barVisible";
 import { useIsWindowFocus } from "./state_machine/windowFocus";
-import { station } from "./subpub/buses";
+import { account as accountBus, station } from "./subpub/buses";
+import { detailStation } from "./components/account/uni";
+import { MainPage } from "./subpub/type";
+import { toggleAccountShow } from "@/src/state_machine/accountShow";
 
 interface CtrlButtonProps extends PropsWithChildren {
   icon?: React.ReactNode;
@@ -56,12 +59,37 @@ const CtrlButton = memo(function CtrlButtonComp({
 
 export const LeftControls = memo(function LeftControlsComponent() {
   const os = station.os.useSee();
+  const [page, setPage] = station.main_page.useAll();
+  const setSelectedAccount = accountBus.selectedAccount.useSet();
+  const setCurEdit = detailStation.curEdit.useSet();
   return (
-    <div className="flex items-center px-2 text-[var(--content)]">
+    <div className="flex items-center px-2 text-[var(--content)] gap-1">
       {os.match({
         macos: () => <div className="w-[84px]" />,
         _: () => null,
       })}
+      {os.match({
+        windows: () => (
+          <div className="opacity-70">
+            <icons.egg size={16} />
+          </div>
+        ),
+        _: () => null,
+      })}
+      <AnimatePresence>
+        {/* <CtrlButton icon={<icons.layoutLeft size={16} />} /> */}
+        {!page.is(MainPage.Home) && (
+          <CtrlButton
+            icon={<icons.house6 size={16} />}
+            onClick={() => {
+              setPage(MainPage.Home);
+              setSelectedAccount(null);
+              toggleAccountShow(false);
+              setCurEdit(null);
+            }}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 });
@@ -110,52 +138,52 @@ const TopBar = memo(function TopBarComponent() {
   const windowFocused = useIsWindowFocus();
   const allowBarInteraction = station.allowBarInteraction.useSee();
 
-  useEffect(() => {
-    if (!windowFocused) {
-      document.body.setAttribute("window-blur", "");
+  // useEffect(() => {
+  //   if (!windowFocused) {
+  //     document.body.setAttribute("window-blur", "");
 
-      // 创建遮罩层
-      const overlay = document.createElement("div");
-      overlay.id = "window-blur-overlay";
-      overlay.className = "window-blur-overlay";
+  //     // 创建遮罩层
+  //     const overlay = document.createElement("div");
+  //     overlay.id = "window-blur-overlay";
+  //     overlay.className = "window-blur-overlay";
 
-      // 添加事件监听器以捕获所有事件
-      const blockEvent = (e: Event) => {
-        e.stopPropagation();
-        e.preventDefault();
-      };
+  //     // 添加事件监听器以捕获所有事件
+  //     const blockEvent = (e: Event) => {
+  //       e.stopPropagation();
+  //       e.preventDefault();
+  //     };
 
-      overlay.addEventListener("mousedown", blockEvent, true);
-      overlay.addEventListener("mouseup", blockEvent, true);
-      overlay.addEventListener("click", blockEvent, true);
-      overlay.addEventListener("dblclick", blockEvent, true);
-      overlay.addEventListener("contextmenu", blockEvent, true);
-      overlay.addEventListener("wheel", blockEvent, true);
-      overlay.addEventListener("touchstart", blockEvent, true);
-      overlay.addEventListener("touchend", blockEvent, true);
-      overlay.addEventListener("touchmove", blockEvent, true);
-      overlay.addEventListener("keydown", blockEvent, true);
-      overlay.addEventListener("keyup", blockEvent, true);
+  //     overlay.addEventListener("mousedown", blockEvent, true);
+  //     overlay.addEventListener("mouseup", blockEvent, true);
+  //     overlay.addEventListener("click", blockEvent, true);
+  //     overlay.addEventListener("dblclick", blockEvent, true);
+  //     overlay.addEventListener("contextmenu", blockEvent, true);
+  //     overlay.addEventListener("wheel", blockEvent, true);
+  //     overlay.addEventListener("touchstart", blockEvent, true);
+  //     overlay.addEventListener("touchend", blockEvent, true);
+  //     overlay.addEventListener("touchmove", blockEvent, true);
+  //     overlay.addEventListener("keydown", blockEvent, true);
+  //     overlay.addEventListener("keyup", blockEvent, true);
 
-      document.body.appendChild(overlay);
-    } else {
-      document.body.removeAttribute("window-blur");
+  //     document.body.appendChild(overlay);
+  //   } else {
+  //     document.body.removeAttribute("window-blur");
 
-      // 移除遮罩层
-      const overlay = document.getElementById("window-blur-overlay");
-      if (overlay) {
-        document.body.removeChild(overlay);
-      }
-    }
+  //     // 移除遮罩层
+  //     const overlay = document.getElementById("window-blur-overlay");
+  //     if (overlay) {
+  //       document.body.removeChild(overlay);
+  //     }
+  //   }
 
-    // 清理函数
-    return () => {
-      const overlay = document.getElementById("window-blur-overlay");
-      if (overlay) {
-        document.body.removeChild(overlay);
-      }
-    };
-  }, [windowFocused]);
+  //   // 清理函数
+  //   return () => {
+  //     const overlay = document.getElementById("window-blur-overlay");
+  //     if (overlay) {
+  //       document.body.removeChild(overlay);
+  //     }
+  //   };
+  // }, [windowFocused]);
 
   return (
     <>
@@ -180,6 +208,7 @@ const TopBar = memo(function TopBarComponent() {
               !windowFocused && "opacity-30",
               "transition duration-300 ease-in-out",
             ])}
+            data-tauri-drag-region={!allowBarInteraction}
           >
             {allowBarInteraction && (
               <>

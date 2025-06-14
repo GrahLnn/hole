@@ -1,5 +1,6 @@
-use crate::database::{Crud, HasId};
 use crate::database::enums::table::Table;
+use crate::database::{Crud, HasId};
+use crate::{impl_crud, impl_id, app_schema};
 use anyhow::Error;
 use serde::{Deserialize, Serialize};
 use specta::Type;
@@ -15,15 +16,9 @@ pub struct DbUser {
     pub id: RecordId,
 }
 
-impl Crud for DbUser {
-    const TABLE: Table = Table::User;
-}
-
-impl HasId for DbUser {
-    fn id(&self) -> RecordId {
-        self.id.clone()
-    }
-}
+impl_crud!(DbUser, Table::User);
+impl_id!(DbUser, id);
+app_schema!(User, "DEFINE INDEX unique_id ON TABLE user FIELDS id UNIQUE;");
 
 impl DbUser {
     pub async fn into_model(self) -> Result<User, Error> {
