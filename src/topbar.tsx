@@ -62,6 +62,9 @@ export const LeftControls = memo(function LeftControlsComponent() {
   const [page, setPage] = station.main_page.useAll();
   const setSelectedAccount = accountBus.selectedAccount.useSet();
   const setCurEdit = detailStation.curEdit.useSet();
+  const setAddNewAccount = detailStation.addNewAccount.useSet();
+  const setHideCenterTool = station.hideCenterTool.useSet();
+  const setNewSingleAccount = station.accountDetail.useSet();
   return (
     <div className="flex items-center px-2 text-[var(--content)] gap-1">
       {os.match({
@@ -86,6 +89,9 @@ export const LeftControls = memo(function LeftControlsComponent() {
               setSelectedAccount(null);
               toggleAccountShow(false);
               setCurEdit(null);
+              setAddNewAccount(false);
+              setHideCenterTool(false);
+              setNewSingleAccount(null);
             }}
           />
         )}
@@ -117,9 +123,10 @@ const RightControls = memo(function RightControlsComponent() {
 
 const MiddleControls = memo(function MiddleControlsComponent() {
   const middleTools = station.centerTool.useSee();
+  const hide = station.hideCenterTool.useSee();
   return (
-    <AnimatePresence>
-      {middleTools && (
+    <AnimatePresence mode="wait">
+      {middleTools && !hide && (
         <motion.div
           key={middleTools?.key || "tool"}
           initial={{ opacity: 0, y: 2 }}

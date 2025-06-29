@@ -147,15 +147,16 @@ export function Pair({
 export function PairEdit({
   label,
   value,
+  onChange,
   explain,
   multiLine = false,
 }: {
   label: string;
   value: string;
+  onChange?: (val: string) => void;
   explain?: string;
   multiLine?: boolean;
 }) {
-  const [text, setText] = useState(value);
   return (
     <div className="flex flex-col gap-2">
       <div className="flex flex-col gap-1">
@@ -167,12 +168,21 @@ export function PairEdit({
         </div>
       </div>
       {multiLine ? (
-        <ItemEditContent content={text} onChange={(val) => setText(val)} />
+        <ItemEditContent content={value} onChange={onChange} />
       ) : (
         <input
           type="text"
-          value={text}
-          onChange={(e) => setText(e.target.value)}
+          value={value}
+          onChange={(e) => {
+            const v = e.target.value;
+            if (v.trim() !== "" || value.trim() !== "") {
+              onChange?.(v);
+            }
+          }}
+          onBlur={() => {
+            const v = value.trim();
+            onChange?.(v);
+          }}
           className={cn([
             "text-sm text-[#262626] dark:text-[#d4d4d4] transition px-2 py-1",
             "bg-[#f1f5f9] dark:bg-[#171717] rounded-md border border-[#e5e5e5] dark:border-[#262626]",
@@ -219,7 +229,7 @@ export function DataList({
 }: {
   children: React.ReactNode;
   className?: string;
-  label: DataClass;
+  label: DataCat;
   tokenLen?: number;
   noteLen: number;
 }) {
@@ -230,32 +240,41 @@ export function DataList({
         "flex flex-col gap-2 p-3 border-[#e5e5e5] dark:border-[#171717] overflow-hidden bg-[#f7fafc] dark:bg-[#0c0c0c] transition duration-300",
         curEdit
           ? matchable(curEdit).match({
-              [DataClass.Whole]: () =>
+              [DataCat.Whole]: () =>
                 matchable(label).match({
-                  [DataClass.Meta]: () =>
+                  [DataCat.Meta]: () =>
                     noteLen > 0
                       ? "border-t border-l border-r rounded-t-lg"
                       : "border rounded-lg",
-                  [DataClass.Token]: () => "border-l border-r",
-                  [DataClass.Note]: () =>
+                  [DataCat.Token]: () => "border-l border-r",
+                  [DataCat.Note]: () =>
                     "border-l border-r border-b rounded-b-lg",
                   _: () => "",
                 }),
-              [DataClass.Token]: () =>
+              [DataCat.Empty]: () =>
                 matchable(label).match({
-                  [DataClass.Meta]: () => "h-0 p-0 m-0",
-                  [DataClass.Token]: () => "border rounded-lg",
-                  [DataClass.Note]: () => "h-0 p-0 m-0",
+                  [DataCat.Meta]: () =>
+                    "border-t border-l border-r rounded-t-lg",
+                  [DataCat.Token]: () => "border-l border-r",
+                  [DataCat.Note]: () =>
+                    "border-l border-r border-b rounded-b-lg",
                   _: () => "",
                 }),
-              [DataClass.Note]: () =>
+              [DataCat.Token]: () =>
                 matchable(label).match({
-                  [DataClass.Meta]: () => "h-0 p-0 m-0",
-                  [DataClass.Token]: () => "h-0 p-0 m-0",
-                  [DataClass.Note]: () => "border rounded-lg",
+                  [DataCat.Meta]: () => "h-0 p-0 m-0",
+                  [DataCat.Token]: () => "border rounded-lg",
+                  [DataCat.Note]: () => "h-0 p-0 m-0",
                   _: () => "",
                 }),
-              _: () => "border",
+              [DataCat.Note]: () =>
+                matchable(label).match({
+                  [DataCat.Meta]: () => "h-0 p-0 m-0",
+                  [DataCat.Token]: () => "h-0 p-0 m-0",
+                  [DataCat.Note]: () => "border rounded-lg",
+                  _: () => "",
+                }),
+              [DataCat.Meta]: () => "border",
             })
           : "border rounded-lg",
         className,
@@ -265,14 +284,15 @@ export function DataList({
     </div>
   );
 }
-export enum DataClass {
+export enum DataCat {
   Whole = "Whole",
   Meta = "Meta",
   Token = "Token",
   Note = "Note",
+  Empty = "Empty",
 }
 export const detailStation = {
-  curEdit: createAtom<DataClass | null>(null),
+  curEdit: createAtom<DataCat | null>(null),
   firstEnterDetail: createAtom<boolean>(true),
   addNewAccount: createAtom<boolean>(false),
 };
@@ -290,7 +310,7 @@ export function EntryToolButton({
     <div
       className={cn([
         "flex items-center gap-1 cursor-pointer transition duration-300 ease-in-out group",
-        "hover:bg-[#e7eced] dark:hover:bg-[#383838] rounded-md px-2 py-1",
+        "hover:bg-[#e7eced] dark:hover:bg-[#383838] rounded-md pl-2 pr-2.5 py-1",
       ])}
       onClick={onClick}
     >
@@ -315,11 +335,13 @@ export function ItemEditContent({
   onChange,
   className,
   holder,
+  onBlur,
 }: {
   content: string;
   onChange?: (val: string) => void;
   className?: string;
   holder?: string;
+  onBlur?: () => void;
 }) {
   const [value, setValue] = useState(content);
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
@@ -378,6 +400,7 @@ export function ItemEditContent({
         setValue(e.target.value);
         onChange?.(e.target.value);
       }}
+      onBlur={onBlur}
     />
   );
 }
@@ -390,39 +413,51 @@ export function EditKV({
   onChangeK,
   onChangeV,
   onDelete,
+  onBlur,
+  canDelete = true,
 }: {
   k: string;
   v: string;
   holderK: string;
   holderV: string;
+  canDelete?: boolean;
   onChangeK?: (val: string) => void;
   onChangeV?: (val: string) => void;
   onDelete?: () => void;
+  onBlur?: () => void;
 }) {
   return (
     <>
       <div className="flex items-start gap-1">
         <div className="flex items-center gap-1 w-full">
-          <div
-            className={cn([
-              "p-1 rounded-full transition duration-300 cursor-pointer",
-              "hover:bg-[#e7eced] dark:hover:bg-[#383838]",
-              "text-[#525252] dark:text-[#a3a3a3]",
-              "hover:text-[#262626] dark:hover:text-[#d4d4d4]",
-            ])}
-            onClick={onDelete}
-          >
-            <icons.xmark size={12} />
-          </div>
+          {canDelete && (
+            <div
+              className={cn([
+                "p-1 rounded-full transition duration-300 cursor-pointer",
+                "hover:bg-[#e7eced] dark:hover:bg-[#383838]",
+                "text-[#525252] dark:text-[#a3a3a3]",
+                "hover:text-[#262626] dark:hover:text-[#d4d4d4]",
+              ])}
+              onClick={onDelete}
+            >
+              <icons.xmark size={12} />
+            </div>
+          )}
           <ItemEditContent
             content={k}
             className="w-full"
             holder={holderK}
             onChange={onChangeK}
+            onBlur={onBlur}
           />
         </div>
       </div>
-      <ItemEditContent content={v} holder={holderV} onChange={onChangeV} />
+      <ItemEditContent
+        content={v}
+        holder={holderV}
+        onChange={onChangeV}
+        onBlur={onBlur}
+      />
     </>
   );
 }

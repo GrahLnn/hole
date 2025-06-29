@@ -3,18 +3,19 @@ import { motion, AnimatePresence } from "motion/react";
 import { useEffect, useState } from "react";
 import {
   detailStation,
-  DataClass,
+  DataCat,
   Pair,
   DataList,
   ItemEditTitle,
   ItemEditContent,
   EditKV,
 } from "./uni";
-import { Platform } from "@/src/subpub/type";
+import { Note } from "@/src/cmd/commands";
 import React from "react";
 import { cn } from "@/lib/utils";
+import { station } from "@/src/subpub/buses";
 
-function NoteShow({ platform }: { platform: Platform }) {
+function NoteShow({ notes, onEdit }: { notes: Note[]; onEdit: () => void }) {
   const [titleIsHover, setTitleIsHover] = useState(false);
   const setCurEdit = detailStation.curEdit.useSet();
   return (
@@ -25,7 +26,8 @@ function NoteShow({ platform }: { platform: Platform }) {
           onMouseEnter={() => setTitleIsHover(true)}
           onMouseLeave={() => setTitleIsHover(false)}
           onClick={() => {
-            setCurEdit(DataClass.Note);
+            setCurEdit(DataCat.Note);
+            onEdit();
           }}
         >
           <AnimatePresence mode="wait" initial={false}>
@@ -39,7 +41,7 @@ function NoteShow({ platform }: { platform: Platform }) {
                 transition={{ duration: 0.3 }}
               />
             ) : (
-              <motionIcons.gear3
+              <motionIcons.penWriting7
                 size={18}
                 className="text-[#404040] dark:text-[#d4d4d4] transition"
                 initial={{ pathLength: 0 }}
@@ -58,12 +60,12 @@ function NoteShow({ platform }: { platform: Platform }) {
         </div>
         <div className="flex items-center gap-1">
           <div className="text-xs text-[#525252] dark:text-[#a3a3a3] transition">
-            {platform.notes.length} items
+            {notes.length} items
           </div>
         </div>
       </div>
 
-      {platform.notes.map((note) => (
+      {notes.map((note) => (
         <Pair
           key={note.name}
           label={note.name}
@@ -75,13 +77,8 @@ function NoteShow({ platform }: { platform: Platform }) {
   );
 }
 
-function NoteEdit({ platform }: { platform: Platform }) {
-  const [newNotes, setNewNotes] = useState(
-    (platform.notes.length > 0
-      ? platform.notes
-      : [{ name: "", value: "" }]
-    ).map((n) => ({ ...n }))
-  );
+function NoteEdit() {
+  const [account, setAccount] = station.accountDetail.useAll();
 
   return (
     <>
@@ -100,11 +97,23 @@ function NoteEdit({ platform }: { platform: Platform }) {
               ])}
               onClick={() => {
                 if (
-                  newNotes.length === 0 ||
-                  newNotes[newNotes.length - 1].name !== "" ||
-                  newNotes[newNotes.length - 1].value !== ""
+                  account &&
+                  (account?.platform.notes.length === 0 ||
+                    account?.platform.notes[account?.platform.notes.length - 1]
+                      .name !== "" ||
+                    account?.platform.notes[account?.platform.notes.length - 1]
+                      .value !== "")
                 )
-                  setNewNotes([...newNotes, { name: "", value: "" }]);
+                  setAccount({
+                    ...account,
+                    platform: {
+                      ...account.platform,
+                      notes: [
+                        ...account.platform.notes,
+                        { name: "", value: "" },
+                      ],
+                    },
+                  });
               }}
             >
               Add Note
@@ -119,7 +128,7 @@ function NoteEdit({ platform }: { platform: Platform }) {
         </div>
         <div className="flex flex-col gap-2">
           <div className="grid grid-cols-2 gap-2">
-            {newNotes.map((note, i) => (
+            {account?.platform.notes.map((note, i) => (
               <EditKV
                 key={note.name}
                 k={note.name}
@@ -127,17 +136,29 @@ function NoteEdit({ platform }: { platform: Platform }) {
                 holderK="Name"
                 holderV="Content"
                 onChangeK={(newName) => {
-                  const copy = [...newNotes];
+                  const copy = [...account.platform.notes];
                   copy[i].name = newName;
-                  setNewNotes(copy);
+                  setAccount({
+                    ...account,
+                    platform: {
+                      ...account.platform,
+                      notes: copy,
+                    },
+                  });
                 }}
                 onChangeV={(newValue) => {
-                  const copy = [...newNotes];
+                  const copy = [...account.platform.notes];
                   copy[i].value = newValue;
-                  setNewNotes(copy);
+                  setAccount({
+                    ...account,
+                    platform: {
+                      ...account.platform,
+                      notes: copy,
+                    },
+                  });
                 }}
                 onDelete={() => {
-                  const copy = [...newNotes];
+                  const copy = [...account.platform.notes];
                   if (copy.length === 1) {
                     // 如果是最后一个，替换为空对象
                     copy[0] = { name: "", value: "" };
@@ -145,8 +166,15 @@ function NoteEdit({ platform }: { platform: Platform }) {
                     // 否则正常删除
                     copy.splice(i, 1);
                   }
-                  setNewNotes(copy);
+                  setAccount({
+                    ...account,
+                    platform: {
+                      ...account.platform,
+                      notes: copy,
+                    },
+                  });
                 }}
+                canDelete={account?.platform.notes.length > 1}
               />
             ))}
           </div>
@@ -156,19 +184,17 @@ function NoteEdit({ platform }: { platform: Platform }) {
   );
 }
 
-export default function NoteList({ platform }: { platform: Platform }) {
+export default function NoteList({
+  notes,
+  onEdit,
+}: {
+  notes: Note[];
+  onEdit: () => void;
+}) {
   const curEdit = detailStation.curEdit.useSee();
   return (
-    <DataList
-      className="group"
-      label={DataClass.Note}
-      noteLen={platform.notes.length}
-    >
-      {!curEdit ? (
-        <NoteShow platform={platform} />
-      ) : (
-        <NoteEdit platform={platform} />
-      )}
+    <DataList className="group" label={DataCat.Note} noteLen={notes.length}>
+      {!curEdit ? <NoteShow notes={notes} onEdit={onEdit} /> : <NoteEdit />}
     </DataList>
   );
 }

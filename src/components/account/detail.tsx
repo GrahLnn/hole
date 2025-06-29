@@ -1,4 +1,3 @@
-import { type Account } from "./entry";
 import {
   IconProps,
   icons,
@@ -6,17 +5,18 @@ import {
   type MotionIconProps,
 } from "@/src/assets/icons";
 import { motion, AnimatePresence } from "motion/react";
-import { useState, useRef, useEffect } from "react";
-import { account as accountBus } from "../../subpub/buses";
+import { useState, useRef, useEffect, memo } from "react";
+import { account as accountBus, station } from "../../subpub/buses";
 import { cn } from "@/lib/utils";
 import { useTheme } from "@/src/hooks/useTheme";
 import {
   useCurrentState,
   toggleAccountShow,
 } from "@/src/state_machine/accountShow";
-import { Platform } from "@/src/subpub/type";
 import {
   DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import ToolButton from "../toolButton";
@@ -24,8 +24,47 @@ import ItemsBrief from "./breaf";
 import MetaList from "./meta";
 import TokenList from "./tokenlist";
 import NoteList from "./notelist";
-import { detailStation, DataClass, EntryToolButton } from "./uni";
+import { detailStation, DataCat, EntryToolButton } from "./uni";
 import NewAccount from "./newaccount";
+import {
+  AccountSummary,
+  PlatformDetail as PlatformDetailType,
+  PlatformSummary,
+} from "@/src/cmd/commands";
+import crab from "@/src/cmd";
+import { matchable } from "@/lib/matchable";
+interface IconsItemProps {
+  icon?: React.ReactNode;
+  text: string;
+}
+function IconsItem({ icon, text }: IconsItemProps) {
+  return (
+    <div className="flex items-center gap-2">
+      {icon}
+      <span>{text}</span>
+    </div>
+  );
+}
+interface CardToolItemProps {
+  icon?: React.ReactNode;
+  label: string;
+  onClick?: () => void;
+}
+
+const ToolItem = memo(function CardToolItemComp({
+  icon,
+  label,
+  onClick,
+}: CardToolItemProps) {
+  return (
+    <DropdownMenuItem
+      onClick={onClick}
+      className="opacity-70 hover:opacity-100 transition"
+    >
+      <IconsItem icon={icon} text={label} />
+    </DropdownMenuItem>
+  );
+});
 
 function AccountActions() {
   return (
@@ -43,6 +82,13 @@ function AccountActions() {
       >
         <icons.dotsVertical size={14} />
       </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="min-w-45">
+        <ToolItem icon={<motionIcons.pen size={12} />} label="Modify Email" />
+        <ToolItem
+          icon={<motionIcons.trashSlash size={12} />}
+          label="Delete Account"
+        />
+      </DropdownMenuContent>
     </DropdownMenu>
   );
 }
@@ -109,9 +155,11 @@ function PlatformListSeparator() {
   );
 }
 
-function PlatformTopbar({ platform }: { platform: Platform }) {
+function PlatformTopbar({ platform }: { platform: PlatformDetailType }) {
   const setCurEdit = detailStation.curEdit.useSet();
   const curEdit = detailStation.curEdit.useSee();
+  const selectedAccount = accountBus.selectedAccount.useSee();
+  const setAccount = station.accountDetail.useSet();
   return (
     <AnimatePresence>
       {!curEdit && (
@@ -133,7 +181,7 @@ function PlatformTopbar({ platform }: { platform: Platform }) {
                 size={12}
                 className={cn([
                   "transition",
-                  platform.meta.status === "active"
+                  platform.login.status === "Online"
                     ? "text-green-500 dark:text-green-600"
                     : "text-red-500 dark:text-red-600",
                 ])}
@@ -144,20 +192,25 @@ function PlatformTopbar({ platform }: { platform: Platform }) {
                 "text-sm text-[#404040] dark:text-[#d4d4d4] transition",
               ])}
             >
-              {platform.meta.status === "active"
+              {platform.login.status === "Online"
                 ? "Online"
-                : platform.meta.status === "inactive"
+                : platform.login.status === "Unavailable"
                 ? "Unavailable"
                 : "Deleted"}
             </div>
           </div>
           <div
             className={cn([
-              "text-xs text-[#525252] dark:text-[#737373] hover:text-[#262626] dark:hover:text-[#d4d4d4] transition duration-300 ease-in-out",
+              "text-xs text-[#525252] dark:text-[#737373] hover:text-[#262626] dark:hover:text-[#d4d4d4] transition duration-300 cursor-pointer",
               "hover:bg-[#e7eced] dark:hover:bg-[#383838] rounded-md px-2 py-1",
             ])}
             onClick={() => {
-              setCurEdit(DataClass.Whole);
+              if (!selectedAccount) return;
+              setCurEdit(DataCat.Whole);
+              setAccount({
+                email: selectedAccount.email,
+                platform: platform,
+              });
             }}
           >
             Edit
@@ -168,9 +221,26 @@ function PlatformTopbar({ platform }: { platform: Platform }) {
   );
 }
 
-function PlatformDetail({ platform }: { platform: Platform }) {
+function PlatformDetail({
+  email,
+  sitename,
+}: {
+  email: string;
+  sitename: string;
+}) {
   const [curEdit, setCurEdit] = detailStation.curEdit.useAll();
+  const setAccount = station.accountDetail.useSet();
+  const selectedAccount = accountBus.selectedAccount.useSee();
+  const account = station.accountDetail.useSee();
+  const [platform, setDetailData] = useState<PlatformDetailType | null>(null);
 
+  useEffect(() => {
+    setDetailData(null);
+    crab
+      .readPlatformDetail(email, sitename)
+      .then((result) => result.tap((platform) => setDetailData(platform)));
+  }, [email, sitename]);
+  if (!platform) return;
   return (
     <motion.div
       className={cn(["flex flex-col gap-4 mb-32"])}
@@ -186,16 +256,38 @@ function PlatformDetail({ platform }: { platform: Platform }) {
           />
           <MetaList platform={platform} />
         </div>
-        {(platform.tokens.length > 0 || curEdit === DataClass.Token) && (
+        {(platform.tokens.length > 0 ||
+          (curEdit && [DataCat.Token, DataCat.Empty].includes(curEdit))) && (
           <>
             <PlatformListSeparator />
-            <TokenList platform={platform} />
+            <TokenList
+              tokens={platform.tokens}
+              onEdit={() => {
+                if (selectedAccount) {
+                  setAccount({
+                    email: selectedAccount.email,
+                    platform,
+                  });
+                }
+              }}
+            />
           </>
         )}
-        {(platform.notes.length > 0 || curEdit === DataClass.Note) && (
+        {(platform.notes.length > 0 ||
+          (curEdit && [DataCat.Note, DataCat.Empty].includes(curEdit))) && (
           <>
             <PlatformListSeparator />
-            <NoteList platform={platform} />
+            <NoteList
+              notes={platform.notes}
+              onEdit={() => {
+                if (selectedAccount) {
+                  setAccount({
+                    email: selectedAccount.email,
+                    platform,
+                  });
+                }
+              }}
+            />
           </>
         )}
         {(platform.tokens.length === 0 || platform.notes.length === 0) &&
@@ -203,47 +295,90 @@ function PlatformDetail({ platform }: { platform: Platform }) {
             <>
               <div className="h-4" />
               <div className="flex gap-4 items-center justify-center">
-                {platform.tokens.length === 0 && (
+                {platform.tokens.length === 0 && selectedAccount && (
                   <EntryToolButton
                     icon={<icons.barcode size={12} />}
                     label="Add Token"
                     onClick={() => {
-                      setCurEdit(DataClass.Token);
+                      setCurEdit(DataCat.Token);
+                      setAccount({
+                        email: selectedAccount.email,
+                        platform: {
+                          ...platform,
+                          tokens: [{ name: "", value: "", status: "Active" }],
+                        },
+                      });
                     }}
                   />
                 )}
-                {platform.notes.length === 0 && (
+                {platform.notes.length === 0 && selectedAccount && (
                   <EntryToolButton
                     icon={<icons.note size={12} />}
                     label="Add Note"
                     onClick={() => {
-                      setCurEdit(DataClass.Note);
+                      setCurEdit(DataCat.Note);
+                      setAccount({
+                        email: selectedAccount.email,
+                        platform: {
+                          ...platform,
+                          notes: [{ name: "", value: "" }],
+                        },
+                      });
                     }}
                   />
                 )}
               </div>
             </>
           )}
-        {curEdit && (
+        {curEdit &&
+        account &&
+        account.platform &&
+        account.platform.login.login_method &&
+        matchable(account.platform.login.login_method).match({
+          NamePassword: (r) => !!r.password,
+          SingleSignOn: (r) => !!(r.login_site.sitename && r.login_site.url),
+        }) &&
+        account.platform.sitename &&
+        account.platform.url ? (
           <>
             <div className="h-4" />
             <div className="flex gap-4 items-center justify-center">
               <EntryToolButton
                 icon={<icons.check3 size={12} />}
-                label="Save Changes"
+                label={curEdit === DataCat.Empty ? "Save" : "Save Changes"}
                 onClick={() => {
-                  setCurEdit(null);
+                  if (account)
+                    crab.updateAccount(account).then((res) =>
+                      res.tap(() => {
+                        setAccount(null);
+                        setCurEdit(null);
+                        crab
+                          .readPlatformDetail(email, sitename)
+                          .then((res) =>
+                            res.tap((platform) => setDetailData(platform))
+                          );
+                      })
+                    );
                 }}
               />
             </div>
           </>
+        ) : (
+          curEdit && (
+            <>
+              <div className="h-2" />
+              <div className="text-xs text-[#525252] dark:text-[#a3a3a3] w-full px-4">
+                Notice: Site, URL and Password are required.
+              </div>
+            </>
+          )
         )}
       </div>
     </motion.div>
   );
 }
 
-function PlatformPill({ platform }: { platform: Platform }) {
+function PlatformPill({ platform }: { platform: string }) {
   const [selectedPlatform, setSelectedPlatform] =
     accountBus.selectedPlatform.useAll();
   const curEdit = detailStation.curEdit.useSee();
@@ -259,39 +394,34 @@ function PlatformPill({ platform }: { platform: Platform }) {
           duration: 0.3,
         },
         width: platform !== selectedPlatform && curEdit ? 0 : "auto",
+        height: curEdit === DataCat.Empty ? 0 : "auto",
         marginRight: curEdit ? 0 : 8,
         visibility:
           platform !== selectedPlatform && curEdit ? "hidden" : "visible",
       }}
     >
       <motion.div
-        key={platform.meta.sitename}
+        key={platform}
         className={cn([
           "h-5 rounded-full",
           "flex items-center py-1 px-2",
           "trim-cap text-xs whitespace-nowrap",
         ])}
         initial={{
-          opacity:
-            selectedPlatform?.meta.sitename === platform.meta.sitename
-              ? 0.9
-              : 0.6,
+          opacity: selectedPlatform === platform ? 0.9 : 0.6,
         }}
         animate={{
           // [TODO] 用xstate的状态机来管理
           backgroundColor: curEdit
             ? undefined
-            : selectedPlatform?.meta.sitename === platform.meta.sitename
+            : selectedPlatform === platform
             ? isDark
               ? "#383838"
               : "#e5e5e5"
             : isDark
             ? "#1e1e1e"
             : "#f2f2f2",
-          opacity:
-            selectedPlatform?.meta.sitename === platform.meta.sitename
-              ? 0.9
-              : 0.6,
+          opacity: selectedPlatform === platform ? 0.9 : 0.6,
           transition: {
             duration: 0.3,
           },
@@ -301,71 +431,98 @@ function PlatformPill({ platform }: { platform: Platform }) {
           backgroundColor: curEdit ? undefined : isDark ? "#383838" : "#e5e5e5",
         }}
         onClick={() => {
-          selectedPlatform?.meta.sitename !== platform.meta.sitename &&
-            setSelectedPlatform(platform);
+          selectedPlatform !== platform && setSelectedPlatform(platform);
         }}
         // layout
       >
-        {platform.meta.sitename}
+        {platform}
       </motion.div>
     </motion.div>
   );
 }
 
-function ItemsDetail({ account }: { account: Account }) {
-  const currentPlatform = accountBus.selectedPlatform.useSee();
-  const selectedPlatform = accountBus.selectedPlatform.useSee();
-  const curEdit = detailStation.curEdit.useSee();
+function ItemsDetail({ account }: { account: AccountSummary }) {
+  const [currentPlatform, setCurrentPlatform] =
+    accountBus.selectedPlatform.useAll();
+  const [curEdit, setCurEdit] = detailStation.curEdit.useAll();
+  const setAccount = station.accountDetail.useSet();
 
   return (
     <div className="flex flex-col gap-2">
       <motion.div
-        className="flex"
+        className={curEdit ? "flex justify-between items-center" : "flex"}
         animate={{ marginLeft: !curEdit ? 0 : -6 }}
         transition={{ duration: 0.2 }}
       >
-        {/* {(curEdit
-          ? account.platforms.filter(
-              (platform) => platform === selectedPlatform
-            )
-          : account.platforms
-        ).map((platform) => (
-          <PlatformPill key={platform.meta.sitename} platform={platform} />
-        ))} */}
-        {account.platforms.map((platform) => (
-          <PlatformPill key={platform.meta.sitename} platform={platform} />
-        ))}
+        {curEdit !== DataCat.Empty ? (
+          account.platforms.map((platform) => (
+            <PlatformPill
+              key={platform.sitename}
+              platform={platform.sitename}
+            />
+          ))
+        ) : (
+          <div
+            className={cn([
+              "text-xs text-[#525252] dark:text-[#737373] px-[6px]",
+            ])}
+          >
+            New Platform
+          </div>
+        )}
+
         <AnimatePresence>
-          {!curEdit && (
+          {!curEdit ? (
             <motion.div
-              initial={{ opacity: 0, y: 2 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -2, transition: { duration: 0 } }}
+              initial={{ opacity: 0, filter: "blur(6px)" }}
+              animate={{ opacity: 1, filter: "blur(0px)" }}
+              exit={{ opacity: 0, filter: "blur(6px)" }}
               transition={{ duration: 0.3 }}
             >
-              <ToolButton icon={<icons.plus size={12} />} fn={() => {}} />
+              <ToolButton
+                icon={<icons.plus size={12} />}
+                fn={() => {
+                  crab.newPlatform().then((platform) => {
+                    setAccount({
+                      email: account.email,
+                      platform,
+                    });
+                    setCurEdit(DataCat.Empty);
+                  });
+                }}
+              />
+            </motion.div>
+          ) : (
+            <motion.div
+              className={cn([
+                "text-xs text-[#525252] dark:text-[#737373] hover:text-[#262626] dark:hover:text-[#d4d4d4] transition duration-300 cursor-pointer",
+                "hover:bg-[#e7eced] dark:hover:bg-[#383838] rounded-md px-2 py-1",
+              ])}
+              onClick={() => {
+                setAccount(null);
+                setCurEdit(null);
+              }}
+            >
+              Cancle
             </motion.div>
           )}
         </AnimatePresence>
       </motion.div>
-      {currentPlatform && <PlatformDetail platform={currentPlatform} />}
+      {currentPlatform && (
+        <PlatformDetail email={account.email} sitename={currentPlatform} />
+      )}
     </div>
   );
 }
 
 interface AccountDetailProps {
-  account: Account;
+  account: AccountSummary;
 }
 
 export default function AccountDetail({ account }: AccountDetailProps) {
   const currentState = useCurrentState();
   const setFirstEnterDetail = detailStation.firstEnterDetail.useSet();
   const curEdit = detailStation.curEdit.useSee();
-  const addNewAccount = detailStation.addNewAccount.useSee();
-
-  useEffect(() => {
-    console.log("addNewAccount", addNewAccount);
-  }, [addNewAccount]);
 
   useEffect(() => {
     if (currentState.is("detail"))
@@ -390,35 +547,16 @@ export default function AccountDetail({ account }: AccountDetailProps) {
       <div className="flex flex-col">
         <div className="flex flex-col">
           <div className="flex gap-2 items-center justify-between">
-            {curEdit === DataClass.Whole ? (
-              <motion.input
-                className={cn([
-                  "text-2xl font-semibold w-full outline-none",
-                  // "px-2 -ml-2",
-                  "bg-[#f1f5f9] dark:bg-[#171717] rounded-md",
-                ])}
-                transition={{
-                  duration: 0.5,
-                  ease: [0.16, 1, 0.3, 1],
-                }}
-                value={account.email}
-                onChange={(e) => {
-                  // 这里需要添加更新 account.email 的逻辑
-                  // setAccount({...account, email: e.target.value})
-                }}
-              />
-            ) : (
-              <motion.h1
-                className="text-2xl w-fit"
-                transition={{
-                  duration: 0.5,
-                  ease: [0.16, 1, 0.3, 1],
-                }}
-              >
-                {account.email}
-              </motion.h1>
-            )}
-            <AccountActions />
+            <motion.h1
+              className="text-2xl w-fit"
+              transition={{
+                duration: 0.5,
+                ease: [0.16, 1, 0.3, 1],
+              }}
+            >
+              {account.email}
+            </motion.h1>
+            {!curEdit && <AccountActions />}
           </div>
           <motion.div
             className="text-sm font-medium text-[#737373] "
@@ -432,14 +570,10 @@ export default function AccountDetail({ account }: AccountDetailProps) {
           animate={{ height: curEdit ? 0 : 16 }}
           transition={{ duration: 0.2 }}
         />
-        {addNewAccount ? (
-          <NewAccount />
-        ) : (
-          currentState.match({
-            brief: () => <ItemsBrief account={account} />,
-            detail: () => <ItemsDetail account={account} />,
-          })
-        )}
+        {currentState.match({
+          brief: () => <ItemsBrief account={account} />,
+          detail: () => <ItemsDetail account={account} />,
+        })}
       </div>
     </div>
   );

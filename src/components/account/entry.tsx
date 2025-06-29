@@ -1,24 +1,18 @@
 import { cn } from "@/lib/utils";
 import { account as accountBus } from "../../subpub/buses";
 import { motion } from "motion/react";
-import { Platform } from "@/src/subpub/type";
-
-export interface Account {
-  id: string;
-  email: string;
-  platforms: Platform[];
-}
+import { AccountSummary } from "@/src/cmd/commands";
 
 interface AccountEntryProps {
-  account: Account;
+  account: AccountSummary;
   index: number;
   length: number;
 }
 
 export function AccountEntry({ account, index, length }: AccountEntryProps) {
   const setSelectedAccount = accountBus.selectedAccount.useSet();
-  const isAllActive = account.platforms.every((p) => p.meta.status === "active");
-  const partialActive = account.platforms.some((p) => p.meta.status === "active");
+  const isAllActive = account.platforms.every((p) => p.status === "Online");
+  const partialActive = account.platforms.some((p) => p.status === "Online");
   const healthStatus = isAllActive
     ? "healthy"
     : partialActive
@@ -38,7 +32,7 @@ export function AccountEntry({ account, index, length }: AccountEntryProps) {
       : "bg-red-500";
   return (
     <div
-      key={account.id}
+      key={account.email}
       className={cn([
         "relative group select-none",
         "py-3.5 px-4 -mx-4",
@@ -77,10 +71,10 @@ export function AccountEntry({ account, index, length }: AccountEntryProps) {
               <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 transition-opacity duration-300">
                 {/* 方案1: 智能截断 - 显示前3个平台，超过时显示数量 */}
                 {account.platforms.length <= 3
-                  ? account.platforms.map((p) => p.meta.sitename).join(" • ")
+                  ? account.platforms.map((p) => p.sitename).join(" • ")
                   : `${account.platforms
                       .slice(0, 2)
-                      .map((p) => p.meta.sitename)
+                      .map((p) => p.sitename)
                       .join(" • ")} +${account.platforms.length - 2} more`}
 
                 {/* 方案2: 横向滚动（注释掉的备选方案）
@@ -116,7 +110,7 @@ export function AccountEntry({ account, index, length }: AccountEntryProps) {
                 className="w-5 h-5 rounded-full bg-gray-100 dark:bg-gray-700 ring-2 ring-white dark:ring-gray-900 flex items-center justify-center"
               >
                 <span className="text-[10px] font-medium text-gray-600 dark:text-gray-300">
-                  {platform.meta.sitename.charAt(0)}
+                  {platform.sitename.charAt(0)}
                 </span>
               </div>
             ))}

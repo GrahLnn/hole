@@ -1,11 +1,11 @@
-import { type Account } from "./entry";
 import { motion } from "motion/react";
 import { useState, useRef, useEffect } from "react";
 import { account as accountBus } from "../../subpub/buses";
 import { cn } from "@/lib/utils";
 import { toggleAccountShow } from "@/src/state_machine/accountShow";
+import { AccountSummary } from "@/src/cmd/commands";
 
-export default function ItemsBrief({ account }: { account: Account }) {
+export default function ItemsBrief({ account }: { account: AccountSummary }) {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const [activePillStyle, setActivePillStyle] = useState({});
   const platformRefs = useRef<(HTMLDivElement | null)[]>([]);
@@ -41,7 +41,7 @@ export default function ItemsBrief({ account }: { account: Account }) {
       <div className="relative ">
         {account.platforms.map((platform, index) => (
           <div
-            key={platform.meta.sitename}
+            key={platform.sitename}
             ref={(el) => {
               platformRefs.current[index] = el;
             }}
@@ -49,7 +49,7 @@ export default function ItemsBrief({ account }: { account: Account }) {
             onMouseEnter={() => setHoveredIndex(index)}
             onMouseLeave={() => setHoveredIndex(null)}
             onClick={() => {
-              setSelectedPlatform(platform);
+              setSelectedPlatform(platform.sitename);
               toggleAccountShow(true);
             }}
           >
@@ -59,20 +59,20 @@ export default function ItemsBrief({ account }: { account: Account }) {
                   <div
                     className={cn([
                       "w-1 h-1 rounded-full",
-                      platform.meta.status === "active"
+                      platform.status === "Online"
                         ? "bg-green-500"
                         : "bg-red-500",
                     ])}
                   />
                   <motion.div
                     className="text-sm font-semibold text-[#262626] dark:text-[#d4d4d4]"
-                    layoutId={`platform-${platform.meta.sitename}`}
+                    layoutId={`platform-${platform.sitename}`}
                     transition={{
                       duration: 0.5,
                       ease: [0.16, 1, 0.3, 1],
                     }}
                   >
-                    {platform.meta.sitename}
+                    {platform.sitename}
                   </motion.div>
                 </div>
                 <div

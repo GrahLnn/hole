@@ -5,28 +5,29 @@ use anyhow::Result;
 use futures::future;
 use serde::{Deserialize, Serialize};
 use specta::Type;
+use std::collections::HashMap;
 use surrealdb::sql::Datetime;
 use surrealdb::RecordId;
 
-#[derive(Debug, Serialize, Deserialize, Clone, Type)]
+#[derive(Debug, Serialize, Deserialize, Clone, Type, PartialEq)]
 pub enum AccountStatus {
     Online,
     Unavailable,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, Type)]
+#[derive(Debug, Serialize, Deserialize, Clone, Type, PartialEq)]
 pub enum LoginMethod {
     SingleSignOn { login_site: Platform },
     NamePassword { password: String },
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, Type)]
+#[derive(Debug, Serialize, Deserialize, Clone, Type, PartialEq)]
 pub enum TokenStatus {
     Active,
     Inactive,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, Type)]
+#[derive(Debug, Serialize, Deserialize, Clone, Type, PartialEq)]
 pub struct Token {
     pub name: String,
     pub value: String,
@@ -35,26 +36,26 @@ pub struct Token {
     pub status: TokenStatus,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, Type)]
+#[derive(Debug, Serialize, Deserialize, Clone, Type, PartialEq)]
 pub struct Note {
     pub name: String,
     pub value: String,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, Type)]
+#[derive(Debug, Serialize, Deserialize, Clone, Type, PartialEq)]
 pub struct Login {
     pub login_method: LoginMethod,
     pub status: AccountStatus,
     pub cookies: Option<String>,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, Type)]
+#[derive(Debug, Serialize, Deserialize, Clone, Type, PartialEq)]
 pub struct Platform {
     pub sitename: String,
     pub url: String,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, Type)]
+#[derive(Debug, Serialize, Deserialize, Clone, Type, PartialEq)]
 pub struct Account {
     pub email: String,
 }
@@ -220,7 +221,7 @@ pub async fn update_login_info(email: &str, platform: &str, login: Login) -> Res
         .next()
         .ok_or(anyhow::anyhow!("login not found"))
         .map_err(|e| e.to_string())?;
-    Login::upsert_by_id(login_id.clone(), login)
+    Login::update(login_id.clone(), login)
         .await
         .map_err(|e| e.to_string())?;
     Ok(())
@@ -414,11 +415,35 @@ pub async fn read_account_summary() -> Result<Vec<AccountSummary>, String> {
 #[derive(Debug, Serialize, Deserialize, Clone, Type)]
 pub struct PlatformDetail {
     pub sitename: String,
+    pub login: Login,
     pub url: String,
-    pub status: AccountStatus,
-    pub cookies: Option<String>,
     pub tokens: Vec<Token>,
     pub notes: Vec<Note>,
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn new_platform() -> PlatformDetail {
+    PlatformDetail {
+        sitename: String::new(),
+        login: Login {
+            login_method: LoginMethod::NamePassword {
+                password: String::new(),
+            },
+            status: AccountStatus::Online,
+            cookies: None,
+        },
+        url: String::new(),
+        tokens: vec![Token {
+            name: String::new(),
+            value: String::new(),
+            status: TokenStatus::Active,
+        }],
+        notes: vec![Note {
+            name: String::new(),
+            value: String::new(),
+        }],
+    }
 }
 
 #[tauri::command]
@@ -441,10 +466,137 @@ pub async fn read_platform_detail(email: &str, platform: &str) -> Result<Platfor
         .map_err(|e| e.to_string())?;
     Ok(PlatformDetail {
         sitename: platform.sitename,
+        login,
         url: platform.url,
-        status: login.status,
-        cookies: login.cookies,
         tokens,
         notes,
     })
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, Type)]
+pub struct AccountSlot {
+    pub email: String,
+    pub platform: PlatformDetail,
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn create_new_account(data: AccountSlot) -> Result<(), String> {
+    create_account(&data.email)
+        .await
+        .map_err(|e| e.to_string())?;
+    create_platform(&data.platform.sitename, &data.platform.url)
+        .await
+        .map_err(|e| e.to_string())?;
+    relate_platform(&data.email, &data.platform.sitename)
+        .await
+        .map_err(|e| e.to_string())?;
+    relate_login_info(&data.email, &data.platform.sitename, data.platform.login)
+        .await
+        .map_err(|e| e.to_string())?;
+    if data.platform.tokens.len() > 0 {
+        for token in data.platform.tokens {
+            relate_token(&data.email, &data.platform.sitename, token)
+                .await
+                .map_err(|e| e.to_string())?;
+        }
+    }
+    if data.platform.notes.len() > 0 {
+        for note in data.platform.notes {
+            relate_note(&data.email, &data.platform.sitename, note)
+                .await
+                .map_err(|e| e.to_string())?;
+        }
+    }
+    Ok(())
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn update_account(data: AccountSlot) -> Result<(), String> {
+    // ---------- 1. 读取旧状态 ----------
+    let current = read_platform_detail(&data.email, &data.platform.sitename)
+        .await
+        .map_err(|e| e.to_string())?;
+
+    // ---------- 2. Login ----------
+    if current.login != data.platform.login {
+        update_login_info(
+            &data.email,
+            &data.platform.sitename,
+            data.platform.login.clone(),
+        )
+        .await
+        .map_err(|e| e.to_string())?;
+    }
+
+    // ---------- 3. Token ----------
+    let to_token_map = |v: Vec<Token>| {
+        v.into_iter()
+            .filter(|t| !t.name.trim().is_empty() && !t.value.trim().is_empty())
+            .map(|t| (t.name.clone(), t))
+            .collect::<HashMap<_, _>>()
+    };
+    let old_tokens = to_token_map(current.tokens);
+    let new_tokens = to_token_map(data.platform.tokens.clone());
+
+    // 新增或修改
+    for (name, new_tok) in &new_tokens {
+        match old_tokens.get(name) {
+            None => {
+                // 新增
+                relate_token(&data.email, &data.platform.sitename, new_tok.clone())
+                    .await
+                    .map_err(|e| e.to_string())?;
+            }
+            Some(old_tok) if old_tok != new_tok => {
+                // 修改
+                update_token(name, new_tok.clone())
+                    .await
+                    .map_err(|e| e.to_string())?;
+            }
+            _ => {}
+        }
+    }
+    // 删除
+    for name in old_tokens.keys().filter(|n| !new_tokens.contains_key(*n)) {
+        delete_token(&data.email, &data.platform.sitename, name)
+            .await
+            .map_err(|e| e.to_string())?;
+    }
+
+    // ---------- 4. Note ----------
+    let to_note_map = |v: Vec<Note>| {
+        v.into_iter()
+            .filter(|n| !n.name.trim().is_empty() && !n.value.trim().is_empty())
+            .map(|n| (n.name.clone(), n))
+            .collect::<HashMap<_, _>>()
+    };
+    let old_notes = to_note_map(current.notes);
+    let new_notes = to_note_map(data.platform.notes.clone());
+
+    for (name, new_note) in &new_notes {
+        match old_notes.get(name) {
+            None => {
+                // 新增
+                relate_note(&data.email, &data.platform.sitename, new_note.clone())
+                    .await
+                    .map_err(|e| e.to_string())?;
+            }
+            Some(old_note) if old_note != new_note => {
+                // 修改
+                update_note(name, new_note.clone())
+                    .await
+                    .map_err(|e| e.to_string())?;
+            }
+            _ => {}
+        }
+    }
+    for name in old_notes.keys().filter(|n| !new_notes.contains_key(*n)) {
+        delete_note(&data.email, &data.platform.sitename, name)
+            .await
+            .map_err(|e| e.to_string())?;
+    }
+
+    Ok(())
 }

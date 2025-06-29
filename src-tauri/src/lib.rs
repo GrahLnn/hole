@@ -46,6 +46,9 @@ pub fn run() {
         account::create_platform,
         account::read_account_summary,
         account::read_platform_detail,
+        account::new_platform,
+        account::create_new_account,
+        account::update_account,
     ];
     let events = collect_events![event::FullScreenEvent];
 

@@ -870,18 +870,18 @@ export const icons = {
             clipRule="evenodd"
             d="M6.68263 2.08733C6.85421 2.46433 6.68768 2.90905 6.31068 3.08064C4.06136 4.10436 2.5 6.37069 2.5 9C2.5 11.6293 4.06136 13.8957 6.31068 14.9194C6.68768 15.091 6.85421 15.5357 6.68263 15.9127C6.51104 16.2897 6.06632 16.4562 5.68932 16.2846C2.92464 15.0263 1 12.2387 1 9C1 5.76131 2.92464 2.97366 5.68932 1.71538C6.06632 1.5438 6.51104 1.71033 6.68263 2.08733Z"
             fillOpacity="0.4"
-          ></path>
+          />
           <path
             fillRule="evenodd"
             clipRule="evenodd"
             d="M11.3174 2.08733C11.489 1.71033 11.9337 1.5438 12.3107 1.71538C15.0754 2.97366 17 5.76131 17 9C17 12.2387 15.0754 15.0263 12.3107 16.2846C11.9337 16.4562 11.489 16.2897 11.3174 15.9127C11.1458 15.5357 11.3123 15.091 11.6893 14.9194C13.9386 13.8957 15.5 11.6293 15.5 9C15.5 6.37069 13.9386 4.10436 11.6893 3.08064C11.3123 2.90905 11.1458 2.46433 11.3174 2.08733Z"
             fillOpacity="0.4"
-          ></path>
+          />
           <path
             fillRule="evenodd"
             clipRule="evenodd"
             d="M5 9C5 6.79079 6.79079 5 9 5C11.2092 5 13 6.79079 13 9C13 11.2092 11.2092 13 9 13C6.79079 13 5 11.2092 5 9Z"
-          ></path>
+          />
         </g>
       </svg>
     );
@@ -1254,14 +1254,185 @@ export const motionIcons = {
         className={className}
       >
         <g fill={color || "currentColor"}>
-          <path
+          <motion.path
             opacity="0.4"
             d="M14.4697 11.9697L12.5 13.9394V7.74991C12.5 7.33581 12.1641 6.99991 11.75 6.99991C11.3359 6.99991 11 7.33581 11 7.74991V13.9394L9.03029 11.9697C8.73729 11.6767 8.26267 11.6767 7.96977 11.9697C7.67687 12.2627 7.67677 12.7373 7.96977 13.0302L11.2198 16.2802C11.3663 16.4267 11.5577 16.4999 11.7501 16.4999C11.9425 16.4999 12.1339 16.4267 12.2804 16.2802L15.5304 13.0302C15.8234 12.7372 15.8234 12.2626 15.5304 11.9697C15.2374 11.6768 14.7626 11.6767 14.4697 11.9697Z"
             {...props}
           />
-          <path
+          <motion.path
             {...props}
             d="M8.96969 6.0303C9.11619 6.1768 9.30759 6.24999 9.49999 6.24999C9.69239 6.24999 9.8838 6.1768 10.0303 6.0303C10.3233 5.7373 10.3233 5.26268 10.0303 4.96978L6.7803 1.71978C6.4873 1.42678 6.01268 1.42678 5.71978 1.71978L2.4698 4.96978C2.1768 5.26278 2.1768 5.7374 2.4698 6.0303C2.7628 6.3232 3.2374 6.3233 3.5303 6.0303L5.49999 4.0606V10.2501C5.49999 10.6642 5.83589 11.0001 6.24999 11.0001C6.66409 11.0001 6.99999 10.6642 6.99999 10.2501V4.0606L8.96969 6.0303Z"
+          />
+        </g>
+      </svg>
+    );
+  },
+  userUpdate({ size, color, className, ...props }: MotionIconProps) {
+    return (
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width={size || 18}
+        height={size || 18}
+        viewBox="0 0 18 18"
+        className={className}
+      >
+        <g fill={color || "currentColor"}>
+          <motion.path
+            fillRule="evenodd"
+            clipRule="evenodd"
+            d="M13 15.2686C13 14.3023 13.7838 13.5186 14.75 13.5186C15.7162 13.5186 16.5 14.3023 16.5 15.2686C16.5 16.2348 15.7162 17.0186 14.75 17.0186C13.7838 17.0186 13 16.2348 13 15.2686Z"
+            {...props}
+          />
+          <motion.path
+            d="M8.99999 9.01855C6.14167 9.01855 3.69058 10.7343 2.60517 13.1859C2.05162 14.4371 2.74425 15.8502 4.01259 16.2499C5.29503 16.654 6.99283 17.0186 8.99999 17.0186C10.044 17.0186 11.0044 16.9199 11.8661 16.7684C11.6322 16.3196 11.5 15.8095 11.5 15.2686C11.5 13.4781 12.9486 12.0253 14.7376 12.0186C13.4753 10.2068 11.3787 9.01855 8.99999 9.01855Z"
+            fillOpacity="0.4"
+            {...props}
+          />
+          <motion.path
+            d="M9 7.50049C10.7952 7.50049 12.25 6.04543 12.25 4.25049C12.25 2.45554 10.7952 1.00049 9 1.00049C7.20482 1.00049 5.75 2.45554 5.75 4.25049C5.75 6.04543 7.20482 7.50049 9 7.50049Z"
+            fillOpacity="0.4"
+            {...props}
+          />
+        </g>
+      </svg>
+    );
+  },
+  usersDots({ size, color, className, ...props }: MotionIconProps) {
+    return (
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width={size || 18}
+        height={size || 18}
+        viewBox="0 0 18 18"
+        className={className}
+      >
+        <g fill={color || "currentColor"}>
+          <motion.path
+            {...props}
+            d="M13 15.0005C12.449 15.0005 12 14.5525 12 14.0005C12 13.4485 12.449 13.0005 13 13.0005C13.551 13.0005 14 13.4485 14 14.0005C14 14.5525 13.551 15.0005 13 15.0005Z"
+          />
+          <motion.path
+            {...props}
+            d="M10 15.0005C9.449 15.0005 9 14.5525 9 14.0005C9 13.4485 9.449 13.0005 10 13.0005C10.551 13.0005 11 13.4485 11 14.0005C11 14.5525 10.551 15.0005 10 15.0005Z"
+          />
+          <motion.path
+            d="M1.42474 12.181C2.45324 10.1468 4.56096 8.74951 7.00003 8.74951C9.15644 8.74951 11.0536 9.84245 12.1751 11.5005H9.99997C8.62152 11.5005 7.49997 12.6191 7.49997 14.0005C7.49997 14.7745 7.85211 15.4661 8.40425 15.9245C7.95938 15.9728 7.49056 16.0005 7.00003 16.0005C5.26802 16.0005 3.80715 15.6556 2.71401 15.276C1.47805 14.8468 0.805407 13.4059 1.42474 12.181Z"
+            fillOpacity="0.4"
+            {...props}
+          />
+          <motion.path
+            {...props}
+            d="M16 15.0005C15.449 15.0005 15 14.5525 15 14.0005C15 13.4485 15.449 13.0005 16 13.0005C16.551 13.0005 17 13.4485 17 14.0005C17 14.5525 16.551 15.0005 16 15.0005Z"
+          />
+          <motion.path
+            fillRule="evenodd"
+            clipRule="evenodd"
+            d="M4.25 4.75049C4.25 3.2313 5.48133 2.00049 7 2.00049C8.51867 2.00049 9.75 3.2313 9.75 4.75049C9.75 6.26968 8.51867 7.50049 7 7.50049C5.48133 7.50049 4.25 6.26968 4.25 4.75049Z"
+            fillOpacity="0.4"
+            {...props}
+          />
+          <motion.path
+            fillRule="evenodd"
+            clipRule="evenodd"
+            d="M10.5503 7.08782C10.9712 7.34943 11.468 7.50049 12 7.50049C13.5187 7.50049 14.75 6.26968 14.75 4.75049C14.75 3.2313 13.5187 2.00049 12 2.00049C11.468 2.00049 10.9712 2.15155 10.5503 2.41315C10.9926 3.08366 11.25 3.88692 11.25 4.75049C11.25 5.61405 10.9926 6.41732 10.5503 7.08782Z"
+            fillOpacity="0.4"
+            {...props}
+          />
+        </g>
+      </svg>
+    );
+  },
+  /**
+   *
+   * @preview ![](data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxOCIgaGVpZ2h0PSIxOCIgdmlld0JveD0iMCAwIDE4IDE4Ij48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ3aGl0ZSIvPjxnIGZpbGw9Im5vbmUiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIgc3Ryb2tlLXdpZHRoPSIxLjUiIHN0cm9rZT0iIzIxMjEyMSI+PHBhdGggZD0iTTMuNzUsMTUuMjVzMy41OTktLjU2OCw0LjU0Ni0xLjUxNWMuOTQ3LS45NDcsNy4zMjctNy4zMjcsNy4zMjctNy4zMjcsLjgzNy0uODM3LC44MzctMi4xOTQsMC0zLjAzLS44MzctLjgzNy0yLjE5NC0uODM3LTMuMDMsMCwwLDAtNi4zOCw2LjM4LTcuMzI3LDcuMzI3cy0xLjUxNSw0LjU0Ni0xLjUxNSw0LjU0NmgwWiI+PC9wYXRoPjxsaW5lIHgxPSI4LjI1IiB5MT0iMi43NSIgeDI9IjEuNzUiIHkyPSIyLjc1Ij48L2xpbmU+PGxpbmUgeDE9IjQuMjUiIHkxPSI2LjI1IiB4Mj0iMS43NSIgeTI9IjYuMjUiPjwvbGluZT48L2c+PC9zdmc+)
+   * @returns
+   */
+  penWriting7({ size, color, className, ...props }: MotionIconProps) {
+    return (
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width={size || 18}
+        height={size || 18}
+        viewBox="0 0 18 18"
+        className={className}
+      >
+        <g
+          fill="none"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth="1.5"
+          stroke={color || "currentColor"}
+        >
+          <motion.path
+            {...props}
+            d="M3.75,15.25s3.599-.568,4.546-1.515c.947-.947,7.327-7.327,7.327-7.327,.837-.837,.837-2.194,0-3.03-.837-.837-2.194-.837-3.03,0,0,0-6.38,6.38-7.327,7.327s-1.515,4.546-1.515,4.546h0Z"
+          />
+          <motion.line {...props} x1="8.25" y1="2.75" x2="1.75" y2="2.75" />
+          <motion.line {...props} x1="4.25" y1="6.25" x2="1.75" y2="6.25" />
+        </g>
+      </svg>
+    );
+  },
+  /**
+   *
+   * @preview ![](data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxOCIgaGVpZ2h0PSIxOCIgdmlld0JveD0iMCAwIDE4IDE4Ij48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ3aGl0ZSIvPjxnIGZpbGw9Im5vbmUiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIgc3Ryb2tlLXdpZHRoPSIxLjUiIHN0cm9rZT0iIzIxMjEyMSI+PHBhdGggZD0iTTQuNjAwOTQgMTMuMzk5TDQuMzAzMzQgNy43NSI+PC9wYXRoPjxwYXRoIGQ9Ik0xMy42NTM1IDguNTg4NzVMMTMuMzUgMTQuMzVDMTMuMjk0IDE1LjQyMDEgMTIuNDE2IDE2LjI1IDExLjM1MyAxNi4yNUg2LjY0Nzk2QzYuNDQ5MjYgMTYuMjUgNi4yNTcwNiAxNi4yMjExIDYuMDc1NTYgMTYuMTY3Ij48L3BhdGg+PHBhdGggZD0iTTIuNzUgNC43NUgxMy4yNSI+PC9wYXRoPjxwYXRoIGQ9Ik02Ljc1IDQuNzVWMi43NUM2Ljc1IDIuMiA3LjE5OCAxLjc1IDcuNzUgMS43NUgxMC4yNUMxMC44MDIgMS43NSAxMS4yNSAyLjIgMTEuMjUgMi43NVY0Ljc1Ij48L3BhdGg+PHBhdGggZD0iTTIgMTZMMTYgMiI+PC9wYXRoPjwvZz48L3N2Zz4=)
+   * @returns
+   */
+  trashSlash({ size, color, className, ...props }: MotionIconProps) {
+    return (
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width={size || 18}
+        height={size || 18}
+        viewBox="0 0 18 18"
+        className={className}
+      >
+        <g
+          fill="none"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth="1.5"
+          stroke={color || "currentColor"}
+        >
+          <motion.path d="M4.60094 13.399L4.30334 7.75" {...props} />
+          <motion.path
+            d="M13.6535 8.58875L13.35 14.35C13.294 15.4201 12.416 16.25 11.353 16.25H6.64796C6.44926 16.25 6.25706 16.2211 6.07556 16.167"
+            {...props}
+          />
+          <motion.path d="M2.75 4.75H13.25" {...props} />
+          <motion.path
+            d="M6.75 4.75V2.75C6.75 2.2 7.198 1.75 7.75 1.75H10.25C10.802 1.75 11.25 2.2 11.25 2.75V4.75"
+            {...props}
+          />
+          <motion.path d="M2 16L16 2" {...props} />
+        </g>
+      </svg>
+    );
+  },
+  /**
+   *
+   * @preview ![](data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxOCIgaGVpZ2h0PSIxOCIgdmlld0JveD0iMCAwIDE4IDE4Ij48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ3aGl0ZSIvPjxnIGZpbGw9Im5vbmUiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIgc3Ryb2tlLXdpZHRoPSIxLjUiIHN0cm9rZT0iIzIxMjEyMSI+PHBhdGggZD0iTTIuNzUsMTUuMjVzMy41OTktLjU2OCw0LjU0Ni0xLjUxNWMuOTQ3LS45NDcsNy4zMjctNy4zMjcsNy4zMjctNy4zMjcsLjgzNy0uODM3LC44MzctMi4xOTQsMC0zLjAzLS44MzctLjgzNy0yLjE5NC0uODM3LTMuMDMsMCwwLDAtNi4zOCw2LjM4LTcuMzI3LDcuMzI3cy0xLjUxNSw0LjU0Ni0xLjUxNSw0LjU0NmgwWiI+PC9wYXRoPjwvZz48L3N2Zz4=)
+   * @returns
+   */
+  pen({ size, color, className, ...props }: MotionIconProps) {
+    return (
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width={size || 18}
+        height={size || 18}
+        viewBox="0 0 18 18"
+        className={className}
+      >
+        <g
+          fill="none"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth="1.5"
+          stroke={color || "currentColor"}
+        >
+          <motion.path
+            d="M2.75,15.25s3.599-.568,4.546-1.515c.947-.947,7.327-7.327,7.327-7.327,.837-.837,.837-2.194,0-3.03-.837-.837-2.194-.837-3.03,0,0,0-6.38,6.38-7.327,7.327s-1.515,4.546-1.515,4.546h0Z"
+            {...props}
           />
         </g>
       </svg>

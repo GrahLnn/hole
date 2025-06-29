@@ -1,11 +1,18 @@
 import { icons, motionIcons } from "@/src/assets/icons";
 import { AnimatePresence, motion } from "motion/react";
 import { useState } from "react";
-import { Platform } from "@/src/subpub/type";
-import { detailStation, DataClass, Pair, DataList, EditKV } from "./uni";
+import { detailStation, DataCat, Pair, DataList, EditKV } from "./uni";
 import { cn } from "@/lib/utils";
+import { Token } from "@/src/cmd/commands";
+import { station } from "@/src/subpub/buses";
 
-function TokenShow({ platform }: { platform: Platform }) {
+function TokenShow({
+  tokens,
+  onEdit,
+}: {
+  tokens: Token[];
+  onEdit: () => void;
+}) {
   const [titleIsHover, setTitleIsHover] = useState(false);
   const setCurEdit = detailStation.curEdit.useSet();
   return (
@@ -16,7 +23,8 @@ function TokenShow({ platform }: { platform: Platform }) {
           onMouseEnter={() => setTitleIsHover(true)}
           onMouseLeave={() => setTitleIsHover(false)}
           onClick={() => {
-            setCurEdit(DataClass.Token);
+            setCurEdit(DataCat.Token);
+            onEdit();
           }}
         >
           <AnimatePresence mode="wait" initial={false}>
@@ -29,7 +37,7 @@ function TokenShow({ platform }: { platform: Platform }) {
                 transition={{ duration: 0.3 }}
               />
             ) : (
-              <motionIcons.gear3
+              <motionIcons.penWriting7
                 className="text-[#404040] dark:text-[#d4d4d4] transition"
                 initial={{ pathLength: 0 }}
                 animate={{ pathLength: 1 }}
@@ -43,15 +51,15 @@ function TokenShow({ platform }: { platform: Platform }) {
           </div>
         </div>
         <div className="text-xs text-[#525252] dark:text-[#a3a3a3] transition">
-          {platform.tokens.length} items
+          {tokens.length} items
         </div>
       </div>
 
-      {platform.tokens.map((token) => (
+      {tokens.map((token) => (
         <Pair
           key={token.name}
           label={token.name}
-          on={token.status === "active"}
+          on={token.status === "Active"}
           bantoggle
           value={token.value}
           action={motionIcons.duplicate2}
@@ -61,13 +69,8 @@ function TokenShow({ platform }: { platform: Platform }) {
   );
 }
 
-function TokenEdit({ platform }: { platform: Platform }) {
-  const [newTokens, setNewTokens] = useState(
-    (platform.tokens.length > 0
-      ? platform.tokens
-      : [{ name: "", value: "" }]
-    ).map((n) => ({ ...n }))
-  );
+function TokenEdit() {
+  const [account, setAccount] = station.accountDetail.useAll();
 
   return (
     <>
@@ -85,11 +88,23 @@ function TokenEdit({ platform }: { platform: Platform }) {
               ])}
               onClick={() => {
                 if (
-                  newTokens.length === 0 ||
-                  newTokens[newTokens.length - 1].name !== "" ||
-                  newTokens[newTokens.length - 1].value !== ""
+                  account &&
+                  (account.platform.tokens.length === 0 ||
+                    account.platform.tokens[account.platform.tokens.length - 1]
+                      .name !== "" ||
+                    account.platform.tokens[account.platform.tokens.length - 1]
+                      .value !== "")
                 )
-                  setNewTokens([...newTokens, { name: "", value: "" }]);
+                  setAccount({
+                    ...account,
+                    platform: {
+                      ...account.platform,
+                      tokens: [
+                        ...account.platform.tokens,
+                        { name: "", value: "", status: "Active" },
+                      ],
+                    },
+                  });
               }}
             >
               Add Token
@@ -103,7 +118,7 @@ function TokenEdit({ platform }: { platform: Platform }) {
         </div>
         <div className="flex flex-col gap-2">
           <div className="grid grid-cols-2 gap-2">
-            {newTokens.map((token, i) => (
+            {account?.platform.tokens.map((token, i) => (
               <EditKV
                 key={token.name}
                 k={token.name}
@@ -111,24 +126,43 @@ function TokenEdit({ platform }: { platform: Platform }) {
                 holderK="Key"
                 holderV="Value"
                 onDelete={() => {
-                  const copy = [...newTokens];
+                  const copy = [...account.platform.tokens];
                   if (copy.length === 1) {
-                    copy[0] = { name: "", value: "" };
+                    copy[0] = { name: "", value: "", status: "Active" };
                   } else {
                     copy.splice(i, 1);
                   }
-                  setNewTokens(copy);
+                  setAccount({
+                    ...account,
+                    platform: {
+                      ...account.platform,
+                      tokens: copy,
+                    },
+                  });
                 }}
                 onChangeK={(newName) => {
-                  const copy = [...newTokens];
+                  const copy = [...account.platform.tokens];
                   copy[i].name = newName;
-                  setNewTokens(copy);
+                  setAccount({
+                    ...account,
+                    platform: {
+                      ...account.platform,
+                      tokens: copy,
+                    },
+                  });
                 }}
                 onChangeV={(newValue) => {
-                  const copy = [...newTokens];
+                  const copy = [...account.platform.tokens];
                   copy[i].value = newValue;
-                  setNewTokens(copy);
+                  setAccount({
+                    ...account,
+                    platform: {
+                      ...account.platform,
+                      tokens: copy,
+                    },
+                  });
                 }}
+                canDelete={account?.platform.tokens.length > 1}
               />
             ))}
           </div>
@@ -138,19 +172,17 @@ function TokenEdit({ platform }: { platform: Platform }) {
   );
 }
 
-export default function TokenList({ platform }: { platform: Platform }) {
+export default function TokenList({
+  tokens,
+  onEdit,
+}: {
+  tokens: Token[];
+  onEdit: () => void;
+}) {
   const curEdit = detailStation.curEdit.useSee();
   return (
-    <DataList
-      className="group"
-      label={DataClass.Token}
-      noteLen={platform.notes.length}
-    >
-      {!curEdit ? (
-        <TokenShow platform={platform} />
-      ) : (
-        <TokenEdit platform={platform} />
-      )}
+    <DataList className="group" label={DataCat.Token} noteLen={tokens.length}>
+      {!curEdit ? <TokenShow tokens={tokens} onEdit={onEdit} /> : <TokenEdit />}
     </DataList>
   );
 }

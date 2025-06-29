@@ -143,6 +143,25 @@ async readPlatformDetail(email: string, platform: string) : Promise<Result<Platf
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
 }
+},
+async newPlatform() : Promise<PlatformDetail> {
+    return await TAURI_INVOKE("new_platform");
+},
+async createNewAccount(data: AccountSlot) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("create_new_account", { data }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async updateAccount(data: AccountSlot) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("update_account", { data }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
 }
 }
 
@@ -161,6 +180,7 @@ fullScreenEvent: "full-screen-event"
 
 /** user-defined types **/
 
+export type AccountSlot = { email: string; platform: PlatformDetail }
 export type AccountStatus = "Online" | "Unavailable"
 export type AccountSummary = { email: string; platforms: PlatformSummary[] }
 export type FullScreenEvent = { is_fullscreen: boolean }
@@ -169,7 +189,7 @@ export type LoginMethod = { SingleSignOn: { login_site: Platform } } | { NamePas
 export type MouseWindowInfo = { mouse_x: number; mouse_y: number; window_x: number; window_y: number; window_width: number; window_height: number; rel_x: number; rel_y: number; pixel_ratio: number }
 export type Note = { name: string; value: string }
 export type Platform = { sitename: string; url: string }
-export type PlatformDetail = { sitename: string; url: string; status: AccountStatus; cookies: string | null; tokens: Token[]; notes: Note[] }
+export type PlatformDetail = { sitename: string; login: Login; url: string; tokens: Token[]; notes: Note[] }
 export type PlatformSummary = { sitename: string; status: AccountStatus; has_cookie: boolean; token_count: number; note_count: number }
 export type Token = { name: string; value: string; status: TokenStatus }
 export type TokenStatus = "Active" | "Inactive"
